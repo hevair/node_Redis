@@ -1,7 +1,8 @@
 import { compare, hash } from 'bcrypt'
 import {Jwt, sign} from 'jsonwebtoken'
-import {Request, Response} from 'express'
+import {json, Request, Response} from 'express'
 import { createConnectionPG } from '../postgres'
+import { setRedis } from '../redis.config'
 
 type User = {
     id: string;
@@ -12,7 +13,6 @@ type User = {
 
 export const LoginUserController ={
     handle: async (request: Request, response:Response) => {
-        console.log(request.body)
 
         const { username, name, password } = request.body
 
@@ -22,7 +22,6 @@ export const LoginUserController ={
             `select * from users where username = $1 limit 1 `,
             [username]
         )
-        console.log(rows)
 
         if(!rows){
             return response.status(401).end()
@@ -40,6 +39,8 @@ export const LoginUserController ={
         const token = sign({username: user.username},`${process.env.JWT_SECRET}`,{
             subject: user.id
         })
+
+        await setRedis(`user-${user.id}`, JSON.stringify(user))
 
         response.json({token: token})
     }

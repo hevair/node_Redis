@@ -1,28 +1,27 @@
 import { Request, Response, Router } from "express";
 import { createConnectionPG } from "../postgres";
+import { getRedis } from "../redis.config";
+
 
 export const GetUserInforController = {
     handle: async (request: Request, response:Response) =>{
         
-        const {userId} = request.body
-        console.log(userId)
+        const {userId} = request     
         
         const clintConnection = await createConnectionPG()
 
-        const {rows} = await clintConnection.query(
-            `select * from users where id = $1 limit 1`,
-            [userId]
-        )
-        console.log(rows)
+        console.time()
+
+         const userRedis = await getRedis(`user-${userId}`)
+         const user = JSON.parse(userRedis)
+
+        // const {rows} = await clintConnection.query(
+        //     `select * from users where id = $1 limit 1`,
+        //     [userId]
+        // )
         
-        const userExists = rows[0]
-
-        if(!userExists){
-            return response.status(401).end();
-        }
-
-        console.log(userExists)
-
-        return response.status(200).send(userExists)
+        console.timeEnd()
+        
+        return response.status(200).json(user)
     }
 }
